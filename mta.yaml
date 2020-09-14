@@ -1,0 +1,107 @@
+## Generated mta.yaml based on template version 0.2.0
+## appName = bookshop
+## language=nodejs; multiTenant=false
+## approuter=
+_schema-version: "3.2"
+ID: cap-tutorials
+version: 0.0.1
+description: "A simple CAP project."
+parameters:
+  enable-parallel-deployments: true  
+build-parameters:
+  before-all:
+   - builder: custom
+     commands:
+      - npm install
+      - npx cds build\/all
+
+modules:
+ - name: cap-tutorials-approuter
+   type: approuter.nodejs
+   path: cap-tutorials-approuter
+   requires:
+   - name: cap-tutorials_html_repo_runtime
+   - name: uaa_cap-tutorials
+   - name: srv-api
+     group: destinations
+     properties:
+       forwardAuthToken: true
+       name: srv-api
+       url: '~{url}'
+ - name: cap-tutorials-uideployer
+   type: com.sap.html5.application-content
+   path: cap-tutorials-uideployer
+   requires:
+   - name: cap-tutorials_html_repo_host
+   build-parameters:
+     requires:
+     - artifacts:
+       - ./*
+       name: alex
+       target-path: resources/alex
+ - name: alex
+   type: html5
+   path: app/alex
+   build-parameters:
+     build-result: dist
+     builder: custom
+     commands:
+     - npm run build
+     supported-platforms: []
+ # --------------------- SERVER MODULE ------------------------
+ - name: bookshop-srv
+ # ------------------------------------------------------------
+   type: nodejs
+   path: gen/srv
+   properties:
+     EXIT: 1  # required by deploy.js task to terminate 
+   requires:
+    # Resources extracted from CAP configuration
+    - name: bookshop-db
+   provides:
+    - name: srv-api      # required by consumers of CAP services (e.g. approuter)
+      properties:
+        url: ${default-url}
+
+ # -------------------- SIDECAR MODULE ------------------------
+ - name: db
+ # ------------------------------------------------------------
+   type: hdb
+   path: gen/db  
+   parameters:
+     app-name: bookshop-db  
+   requires:
+    # 'hana' and 'xsuaa' resources extracted from CAP configuration
+    - name: bookshop-db
+
+
+resources:
+ - name: cap-tutorials_html_repo_runtime
+   type: org.cloudfoundry.managed-service
+   parameters:
+     service: html5-apps-repo
+     service-plan: app-runtime
+
+ - name: cap-tutorials_html_repo_host
+   type: org.cloudfoundry.managed-service
+   parameters:
+     service: html5-apps-repo
+     service-plan: app-host
+ - name: uaa_cap-tutorials
+   type: org.cloudfoundry.managed-service
+   parameters:
+     path: ./xs-security.json
+     service: xsuaa
+     service-plan: application
+ # services extracted from CAP configuration
+ # 'service-plan' can be configured via 'cds.requires.<name>.vcap.plan'
+# ------------------------------------------------------------
+ - name: bookshop-db
+# ------------------------------------------------------------
+   type: com.sap.xs.hdi-container
+   parameters:
+     service: hana  # or 'hanatrial' on trial landscapes
+     service-plan: hdi-shared
+   properties:
+     hdi-service-name: ${service-name}
+

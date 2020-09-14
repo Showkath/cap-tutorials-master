@@ -1,0 +1,12 @@
+GET http://localhost:4004/odata/Admin/Authors HTTP/1.1
+content-Type: application/json
+
+#####
+
+POST http://localhost:4004/odata/Admin/Authors HTTP/1.1
+content-Type: application/json
+
+{
+    "ID": 103, 
+    "name": "Charles Dickens"
+} 
